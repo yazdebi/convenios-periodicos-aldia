@@ -1,8 +1,5 @@
+
 package com.aldia.conveniopagos.entity;
-
-//import javax.persistence.*;
-
-
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -31,6 +28,6 @@ public class Cliente {
     @Column(name = "monto_deuda", nullable = false)
     private Double montoDeuda;
 
-  /*  @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Convenio> convenios;/*/
+    @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Convenio> convenios;
 }

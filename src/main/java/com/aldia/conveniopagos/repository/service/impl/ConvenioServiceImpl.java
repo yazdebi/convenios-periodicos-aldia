@@ -3,11 +3,15 @@ package com.aldia.conveniopagos.repository.service.impl;
 import com.aldia.conveniopagos.dto.ConvenioRequest;
 import com.aldia.conveniopagos.dto.ConvenioResponse;
 import com.aldia.conveniopagos.dto.PagoProgramadoDto;
+import com.aldia.conveniopagos.entity.Cliente;
+import com.aldia.conveniopagos.entity.Convenio;
+import com.aldia.conveniopagos.entity.PromesaPago;
 import com.aldia.conveniopagos.repository.service.ConvenioService;
 import com.aldia.conveniopagos.repository.service.DataBaseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -60,7 +64,35 @@ public class ConvenioServiceImpl implements ConvenioService {
 
     @Override
     public ConvenioResponse obtienePagosProgramados(ConvenioRequest convenioRequest) {
-        ConvenioResponse response = ConvenioResponse.builder().idConvenio(1).pagosProgramados(calcularPagosProgramados(convenioRequest)).build();
+        Cliente cliente = dataBaseService.obtenerClientePorId(convenioRequest.getIdCliente())
+                .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado con id: " + convenioRequest.getIdCliente()));
+
+
+        Convenio convenio = Convenio.builder()
+                .cliente(cliente)
+                .montoTotal(BigDecimal.valueOf(convenioRequest.getMontoTotal()))
+                .montoInicial(BigDecimal.valueOf(convenioRequest.getMontoInicial()))
+                .fechaPrimerPago(convenioRequest.getFechaPrimerPago())
+                .diaPagoPreferido(convenioRequest.getDiaPago())
+                .periodicidad(Convenio.Periodicidad.valueOf(convenioRequest.getPeriodicidad().toUpperCase()))
+                .montoPorPeriodo(BigDecimal.valueOf(convenioRequest.getMontoPorPeriodo()))
+                .build();
+        dataBaseService.guardarConvenio(convenio);
+
+        List<PagoProgramadoDto> pagosProgramados = calcularPagosProgramados(convenioRequest);
+        for (PagoProgramadoDto pago : pagosProgramados) {
+            PromesaPago promesaPago = PromesaPago.builder()
+                    .convenio(convenio)
+                    .fechaPago(pago.getFechaPago())
+                    .monto(BigDecimal.valueOf(pago.getMonto()))
+                    .estatus(PromesaPago.Estatus.PENDIENTE)
+                    .build();
+            dataBaseService.guardarPromesaPago(promesaPago);
+        }
+
+
+
+        ConvenioResponse response = ConvenioResponse.builder().idConvenio(convenio.getIdConvenio()).pagosProgramados(pagosProgramados).build();
         return response;
     }
 
