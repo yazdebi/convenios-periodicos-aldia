@@ -38,11 +38,23 @@ La API estará disponible en: http://localhost:8080/convenio-pagos
 
 ##Reponse
 {
-    "idCliente": 1,
-    "montoTotal": 1020.00,
-    "montoInicial": 270.00,
-    "fechaPrimerPago": "2025-10-07",
-    "diaPago": "LUNES",
-    "periodicidad": "SEMANAL",
-    "montoPorPeriodo": 250.00
+    "idConvenio": 7,
+    "pagosProgramados": [
+        {
+            "fechaPago": "2025-10-07",
+            "monto": 270.0
+        },
+        {
+            "fechaPago": "2025-10-13",
+            "monto": 250.0
+        },
+        {
+            "fechaPago": "2025-10-20",
+            "monto": 250.0
+        },
+        {
+            "fechaPago": "2025-10-27",
+            "monto": 250.0
+        }
+    ]
 }
