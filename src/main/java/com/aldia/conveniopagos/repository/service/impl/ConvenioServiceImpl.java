@@ -27,38 +27,17 @@ public class ConvenioServiceImpl implements ConvenioService {
     public List<PagoProgramadoDto> calcularPagosProgramados(ConvenioRequest convenioRequest) {
         double deudaRestante = convenioRequest.getMontoTotal() - convenioRequest.getMontoInicial();
         List<PagoProgramadoDto> pagosProgramados = new ArrayList<>();
-
-        // Agregar el monto inicial como un pago independiente
         LocalDate fechaPago = convenioRequest.getFechaPrimerPago();
         pagosProgramados.add(new PagoProgramadoDto(fechaPago, convenioRequest.getMontoInicial()));
-
-        // Ajustar la fecha al día de pago preferido asegura que sea el dia que el cliente desea
-        DayOfWeek diaPreferido = convertirDiaSemana(convenioRequest.getDiaPago().toUpperCase());
-        while (fechaPago.getDayOfWeek() != diaPreferido) {
-            fechaPago = fechaPago.plusDays(1);
-        }
-
-        // Agregar el primer pago basado en el montoPorPeriodo
-        double montoPrimerPago = Math.min(deudaRestante, convenioRequest.getMontoPorPeriodo());
-        pagosProgramados.add(new PagoProgramadoDto(fechaPago, montoPrimerPago));
-        deudaRestante -= montoPrimerPago;
-
-        // Calcular la periodicidad en días
-        int diasPeriodicidad = switch (convenioRequest.getPeriodicidad().toUpperCase()) {
-            case "SEMANAL" -> 7;
-            case "QUINCENAL" -> 14;
-            case "MENSUAL" -> 30;
-            default -> throw new IllegalArgumentException("Periodicidad no válida");
-        };
-
-        // Calcular los pagos restantes
+        DayOfWeek dia = convertirDiaSemana(convenioRequest.getDiaPago());
+        fechaPago = ajustaDiaSeleccioando( fechaPago, dia );
         while (deudaRestante > 0) {
-            fechaPago = fechaPago.plusDays(diasPeriodicidad);
-            double montoPago = Math.min(deudaRestante, convenioRequest.getMontoPorPeriodo());
+            double montoPago = Math.min(convenioRequest.getMontoPorPeriodo(), deudaRestante);
+            fechaPago=ajustarFechaAlDiaPreferido(fechaPago, convenioRequest.getPeriodicidad());
+            fechaPago=ajustaDiaSeleccioando( fechaPago, dia );
             pagosProgramados.add(new PagoProgramadoDto(fechaPago, montoPago));
             deudaRestante -= montoPago;
         }
-
         return pagosProgramados;
     }
 
@@ -80,6 +59,7 @@ public class ConvenioServiceImpl implements ConvenioService {
         dataBaseService.guardarConvenio(convenio);
 
         List<PagoProgramadoDto> pagosProgramados = calcularPagosProgramados(convenioRequest);
+
         for (PagoProgramadoDto pago : pagosProgramados) {
             PromesaPago promesaPago = PromesaPago.builder()
                     .convenio(convenio)
@@ -92,7 +72,7 @@ public class ConvenioServiceImpl implements ConvenioService {
 
 
 
-        ConvenioResponse response = ConvenioResponse.builder().idConvenio(convenio.getIdConvenio()).pagosProgramados(pagosProgramados).build();
+        ConvenioResponse response = ConvenioResponse.builder().idConvenio(1).pagosProgramados(pagosProgramados).build();
         return response;
     }
 
@@ -107,6 +87,23 @@ public class ConvenioServiceImpl implements ConvenioService {
             case "DOMINGO" -> DayOfWeek.SUNDAY;
             default -> throw new IllegalArgumentException("Día de la semana no válido: " + diaPagoPreferido);
         };
+    }
+
+    private LocalDate ajustarFechaAlDiaPreferido(LocalDate fecha, String periodicidad) {
+        switch (periodicidad.toUpperCase()) {
+            case "SEMANAL" -> fecha = fecha.plusWeeks(1);
+            case "QUINCENAL" -> fecha = fecha.plusWeeks(2);
+            case "MENSUAL" -> fecha = fecha.plusMonths(1);
+            default -> throw new IllegalArgumentException("Periodicidad no válida: " + periodicidad);
+        }
+        return fecha;
+    }
+
+    private LocalDate ajustaDiaSeleccioando(LocalDate fecha, DayOfWeek dia ) {
+        while (fecha.getDayOfWeek() != dia) {
+            fecha = fecha.plusDays(1);
+        }
+        return fecha;
     }
 
 
